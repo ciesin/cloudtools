@@ -181,7 +181,7 @@ def _convert_with_geopandas_streaming(
                 print(f"  🔧 GeoDataFrame ready ({len(gdf):,} features, CRS: {gdf.crs})")
         
         if verbose:
-            print(f"  💾 Writing FlatGeobuf with spatial index...", end="", flush=True)
+            print(f"   Writing FlatGeobuf with spatial index...", end="", flush=True)
         
         write_start = time.time()
         gdf.to_file(output_path, driver='FlatGeobuf', SPATIAL_INDEX='YES')
@@ -196,15 +196,15 @@ def _convert_with_geopandas_streaming(
         gc.collect()
         
         if verbose:
-            print(f"\r  ✅ Complete: {total_features:,} features → {output_size_mb:.1f} MB")
-            print(f"     ⏱️  Total time: {total_time:.1f}s (read: {read_time:.1f}s, write: {write_time:.1f}s)")
-            print(f"     ℹ️  Used GeoPandas fallback (Polars incompatible schema)")
+            print(f"\r  complete: {total_features:,} features → {output_size_mb:.1f} MB")
+            print(f"     total time: {total_time:.1f}s (read: {read_time:.1f}s, write: {write_time:.1f}s)")
+            print(f"     used GeoPandas fallback (Polars incompatible schema)")
         
         return True, f"Converted {total_features:,} features (GeoPandas)", total_features
         
     except Exception as e:
         if verbose:
-            print(f"\n  ❌ GEOPANDAS FALLBACK ERROR: {type(e).__name__}")
+            print(f"\n   GEOPANDAS FALLBACK ERROR: {type(e).__name__}")
             print(f"     Error details: {str(e)}")
         return False, f"{type(e).__name__}: {str(e)}", 0
 
@@ -253,7 +253,7 @@ def _convert_with_geopandas_direct(
                 print(f"  🔧 GeoDataFrame ready ({len(gdf):,} features, CRS: {gdf.crs})")
         
         if verbose:
-            print(f"  💾 Writing FlatGeobuf with spatial index...", end="", flush=True)
+            print(f"  Writing FlatGeobuf with spatial index...", end="", flush=True)
         
         write_start = time.time()
         gdf.to_file(output_path, driver='FlatGeobuf', SPATIAL_INDEX='YES')
@@ -268,15 +268,15 @@ def _convert_with_geopandas_direct(
         gc.collect()
         
         if verbose:
-            print(f"\r  ✅ Complete: {total_features:,} features → {output_size_mb:.1f} MB")
-            print(f"     ⏱️  Total time: {total_time:.1f}s (read: {read_time:.1f}s, write: {write_time:.1f}s)")
-            print(f"     ℹ️  Used GeoPandas fallback (Polars incompatible schema)")
+            print(f"\r  complete: {total_features:,} features → {output_size_mb:.1f} MB")
+            print(f"     total time: {total_time:.1f}s (read: {read_time:.1f}s, write: {write_time:.1f}s)")
+            print(f"     used GeoPandas fallback (Polars incompatible schema)")
         
         return True, f"Converted {total_features:,} features (GeoPandas)", total_features
         
     except Exception as e:
         if verbose:
-            print(f"\n  ❌ GEOPANDAS FALLBACK ERROR: {type(e).__name__}")
+            print(f"\n  GEOPANDAS FALLBACK ERROR: {type(e).__name__}")
             print(f"     Error details: {str(e)}")
         return False, f"{type(e).__name__}: {str(e)}", 0
 
@@ -311,7 +311,7 @@ def convert_parquet_to_fgb_streaming(
         
         # Get file info for progress tracking
         if verbose:
-            print(f"  📊 Analyzing file...", end="", flush=True)
+            print(f"  Analyzing file...", end="", flush=True)
         
         file_info = get_file_info(input_path)
         total_rows = file_info.get('num_rows', 0)
@@ -320,15 +320,15 @@ def convert_parquet_to_fgb_streaming(
         # This prevents Rust panics that can't be caught by Python try/except
         if file_info.get('has_incompatible_types', False):
             if verbose:
-                print(f"\r  📊 File: {file_info['size_mb']:.1f} MB, {total_rows:,} rows")
-                print(f"  ⚠️  Schema contains MapArray/incompatible types")
-                print(f"  🔄 Using GeoPandas fallback (Polars incompatible)")
+                print(f"\r  File: {file_info['size_mb']:.1f} MB, {total_rows:,} rows")
+                print(f"  Schema contains MapArray/incompatible types")
+                print(f"  Using GeoPandas fallback (Polars incompatible)")
             return _convert_with_geopandas_streaming(input_path, output_path, verbose, start_time)
         
         if verbose:
-            print(f"\r  📊 File: {file_info['size_mb']:.1f} MB, {total_rows:,} rows")
-            print(f"  🔄 Mode: STREAMING (Polars native engine)")
-            print(f"  ⚡ Reading parquet with streaming...", end="", flush=True)
+            print(f"\r  File: {file_info['size_mb']:.1f} MB, {total_rows:,} rows")
+            print(f"  Mode: STREAMING (Polars native engine)")
+            print(f"  Reading parquet with streaming...", end="", flush=True)
         
         # Use Polars native streaming via scan + collect(streaming=True)
         # This is much more efficient than manual chunking
@@ -346,8 +346,8 @@ def convert_parquet_to_fgb_streaming(
             # (shouldn't normally happen after schema inspection)
             if "MapArray" in str(polars_error) or "DataType" in str(polars_error) or "Panic" in str(polars_error):
                 if verbose:
-                    print(f"\r  ⚠️  Polars streaming error (complex schema)")
-                    print(f"  🔄 Falling back to GeoPandas...")
+                    print(f"\r  Polars streaming error (complex schema)")
+                    print(f"  Falling back to GeoPandas...")
                 return _convert_with_geopandas_streaming(input_path, output_path, verbose, start_time)
             else:
                 # Re-raise other errors
@@ -391,7 +391,7 @@ def convert_parquet_to_fgb_streaming(
                 print(f"\r  🔧 GeoDataFrame ready ({len(gdf):,} features, CRS: {gdf.crs})")
         
         if verbose:
-            print(f"  💾 Writing FlatGeobuf with spatial index...", end="", flush=True)
+            print(f"   Writing FlatGeobuf with spatial index...", end="", flush=True)
         
         write_start = time.time()
         # Write as FlatGeobuf with spatial index
@@ -411,14 +411,14 @@ def convert_parquet_to_fgb_streaming(
         gc.collect()
         
         if verbose:
-            print(f"\r  ✅ Complete: {total_features:,} features → {output_size_mb:.1f} MB")
-            print(f"     ⏱️  Total time: {total_time:.1f}s (read: {read_time:.1f}s, write: {write_time:.1f}s)")
+            print(f"\r  Complete: {total_features:,} features → {output_size_mb:.1f} MB")
+            print(f"     Total time: {total_time:.1f}s (read: {read_time:.1f}s, write: {write_time:.1f}s)")
         
         return True, f"Converted {total_features:,} features", total_features
         
     except Exception as e:
         if verbose:
-            print(f"\n  ❌ STREAMING ERROR: {type(e).__name__}")
+            print(f"\n STREAMING ERROR: {type(e).__name__}")
             print(f"     Error details: {str(e)}")
             import traceback
             print(f"     Traceback: {traceback.format_exc()[-500:]}")
@@ -454,16 +454,16 @@ def convert_parquet_to_fgb_direct(
         if file_info.get('has_incompatible_types', False):
             if verbose:
                 file_size_mb = input_path.stat().st_size / 1024 / 1024
-                print(f"  📊 File: {file_size_mb:.1f} MB")
-                print(f"  ⚠️  Schema contains MapArray/incompatible types")
-                print(f"  🔄 Using GeoPandas fallback (Polars incompatible)")
+                print(f"  File: {file_size_mb:.1f} MB")
+                print(f"  Schema contains MapArray/incompatible types")
+                print(f"  Using GeoPandas fallback (Polars incompatible)")
             return _convert_with_geopandas_direct(input_path, output_path, verbose, start_time)
         
         if verbose:
             file_size_mb = input_path.stat().st_size / 1024 / 1024
-            print(f"  📊 File: {file_size_mb:.1f} MB")
-            print(f"  🔄 Mode: DIRECT (eager loading)")
-            print(f"  ⚡ Reading parquet...", end="", flush=True)
+            print(f"  File: {file_size_mb:.1f} MB")
+            print(f"  Mode: DIRECT (eager loading)")
+            print(f"  Reading parquet...", end="", flush=True)
         
         read_start = time.time()
         try:
@@ -476,8 +476,8 @@ def convert_parquet_to_fgb_direct(
             # (shouldn't normally happen after schema inspection)
             if "MapArray" in str(polars_error) or "DataType" in str(polars_error) or "Panic" in str(polars_error):
                 if verbose:
-                    print(f"\r  ⚠️  Polars error (complex schema)")
-                    print(f"  🔄 Falling back to GeoPandas...")
+                    print(f"\r  Polars error (complex schema)")
+                    print(f"  Falling back to GeoPandas...")
                 return _convert_with_geopandas_direct(input_path, output_path, verbose, start_time)
             else:
                 # Re-raise other errors
@@ -522,7 +522,7 @@ def convert_parquet_to_fgb_direct(
                 print(f"\r  🔧 GeoDataFrame ready ({len(gdf):,} features, CRS: {gdf.crs})")
         
         if verbose:
-            print(f"  💾 Writing FlatGeobuf with spatial index...", end="", flush=True)
+            print(f"   Writing FlatGeobuf with spatial index...", end="", flush=True)
         
         write_start = time.time()
         # Write as FlatGeobuf with spatial index
@@ -540,14 +540,14 @@ def convert_parquet_to_fgb_direct(
         gc.collect()
         
         if verbose:
-            print(f"\r  ✅ Complete: {total_features:,} features → {output_size_mb:.1f} MB")
-            print(f"     ⏱️  Total time: {total_time:.1f}s (read: {read_time:.1f}s, write: {write_time:.1f}s)")
+            print(f"\r   Complete: {total_features:,} features → {output_size_mb:.1f} MB")
+            print(f"       Total time: {total_time:.1f}s (read: {read_time:.1f}s, write: {write_time:.1f}s)")
         
         return True, f"Converted {total_features:,} features", total_features
         
     except Exception as e:
         if verbose:
-            print(f"\n  ❌ DIRECT MODE ERROR: {type(e).__name__}")
+            print(f"\n   DIRECT MODE ERROR: {type(e).__name__}")
             print(f"     Error details: {str(e)}")
             import traceback
             print(f"     Traceback: {traceback.format_exc()[-500:]}")
@@ -596,13 +596,13 @@ def convert_parquet_to_fgb(
     if output_path.exists() and not overwrite:
         if verbose:
             output_size_mb = output_path.stat().st_size / 1024 / 1024
-            print(f"⊘ Skipping {input_path.name} → {output_path.name} ({output_size_mb:.1f} MB, already exists)")
+            print(f" Skipping {input_path.name} → {output_path.name} ({output_size_mb:.1f} MB, already exists)")
         return True, "Already exists", output_path
     
     try:
         if verbose:
             print(f"\n{'='*70}")
-            print(f"📦 Converting: {input_path.name}")
+            print(f" Converting: {input_path.name}")
             print(f"{'='*70}")
         
         # Get file metadata
@@ -638,7 +638,7 @@ def convert_parquet_to_fgb(
         
         if not success:
             if verbose:
-                print(f"\n❌ Conversion failed: {message}")
+                print(f"\n Conversion failed: {message}")
             return False, message, None
         
         # Get output file stats
@@ -647,7 +647,7 @@ def convert_parquet_to_fgb(
         compression_pct = ((input_size_mb - output_size_mb) / input_size_mb) * 100
         
         if verbose:
-            print(f"\n📊 Summary:")
+            print(f"\nSummary:")
             print(f"   Input:  {input_size_mb:>8.1f} MB (.parquet)")
             print(f"   Output: {output_size_mb:>8.1f} MB (.fgb)")
             print(f"   Saved:  {compression_pct:>8.1f}% smaller")
@@ -656,17 +656,17 @@ def convert_parquet_to_fgb(
         if cleanup_source and input_path.exists():
             input_path.unlink()
             if verbose:
-                print(f"   🗑️  Cleaned up source file (saved {input_size_mb:.1f} MB)")
+                print(f"    Cleaned up source file (saved {input_size_mb:.1f} MB)")
         
         if verbose:
-            print(f"\n✅ SUCCESS: {output_path.name}")
+            print(f"\n SUCCESS: {output_path.name}")
             print(f"{'='*70}\n")
         
         return True, f"Converted {total_features:,} features", output_path
         
     except Exception as e:
         if verbose:
-            print(f"\n❌ CONVERSION ERROR: {type(e).__name__}")
+            print(f"\n CONVERSION ERROR: {type(e).__name__}")
             print(f"   File: {input_path.name}")
             print(f"   Error: {str(e)}")
             import traceback
@@ -732,11 +732,11 @@ def batch_convert_directory(
         print(f"{'='*70}")
         print(f"📁 Input:  {input_dir}")
         print(f"📁 Output: {output_dir}")
-        print(f"📦 Files:  {len(parquet_files)} GeoParquet files")
+        print(f" Files:  {len(parquet_files)} GeoParquet files")
         
         # Show file size summary
         total_size_mb = sum(f.stat().st_size for f in parquet_files) / 1024 / 1024
-        print(f"💾 Total:  {total_size_mb:.1f} MB")
+        print(f" Total:  {total_size_mb:.1f} MB")
         
         large_files = [f for f in parquet_files if f.stat().st_size / 1024 / 1024 > LARGE_FILE_THRESHOLD_MB]
         if large_files:
@@ -798,32 +798,32 @@ def batch_convert_directory(
             results["success"] = False
             
             if verbose and not use_tqdm:
-                print(f"✗ {parquet_file.name}: {message}")
+                print(f" {parquet_file.name}: {message}")
     
     # Print summary
     if verbose:
         print(f"\n{'='*70}")
-        print(f"📊 BATCH CONVERSION SUMMARY")
+        print(f"BATCH CONVERSION SUMMARY")
         print(f"{'='*70}")
         print(f"   Total files:  {results['total_files']}")
-        print(f"   ✅ Converted:  {results['converted']}")
-        print(f"   ⊘  Skipped:    {results['skipped']} (already exist)")
-        print(f"   ❌ Errors:     {len(results['errors'])}")
+        print(f"    Converted:  {results['converted']}")
+        print(f"     Skipped:    {results['skipped']} (already exist)")
+        print(f"    Errors:     {len(results['errors'])}")
         
         if cleanup_source and results['cleaned_up']:
-            print(f"   🗑️  Cleaned:    {results['cleaned_up']} source files removed")
+            print(f"    Cleaned:    {results['cleaned_up']} source files removed")
         
         if results['output_files']:
             total_size_mb = sum(f.stat().st_size for f in results['output_files']) / 1024 / 1024
-            print(f"   💾 Output:     {total_size_mb:.1f} MB total")
+            print(f"    Output:     {total_size_mb:.1f} MB total")
         
         if results['errors']:
-            print(f"\n❌ ERRORS ENCOUNTERED:")
+            print(f"\n ERRORS ENCOUNTERED:")
             for error in results['errors']:
-                print(f"   • {error['file']}: {error['error']}")
+                print(f"    {error['file']}: {error['error']}")
         
         if results['converted'] > 0:
-            print(f"\n✅ {results['converted']} FlatGeobuf files ready for tippecanoe")
+            print(f"\n {results['converted']} FlatGeobuf files ready for tippecanoe")
             print(f"   Location: {output_dir}")
         
         print(f"{'='*70}\n")
@@ -894,7 +894,7 @@ def convert_geodata_to_fgb(
     # Check if output already exists
     if output_path.exists() and not overwrite:
         if verbose:
-            print(f"⏭️  Skipped {output_path.name} (already exists)")
+            print(f"  Skipped {output_path.name} (already exists)")
         return True, "Output already exists (use overwrite=True to replace)", output_path
     
     # Ensure output directory exists
@@ -916,15 +916,15 @@ def convert_geodata_to_fgb(
         original_count = len(gdf)
         
         if verbose:
-            print(f"   • Loaded {original_count:,} features")
-            print(f"   • Geometry type: {gdf.geom_type.iloc[0] if len(gdf) > 0 else 'Unknown'}")
-            print(f"   • CRS: {gdf.crs}")
+            print(f"    Loaded {original_count:,} features")
+            print(f"    Geometry type: {gdf.geom_type.iloc[0] if len(gdf) > 0 else 'Unknown'}")
+            print(f"    CRS: {gdf.crs}")
         
         # Apply attribute filter if provided
         if where:
             gdf = gdf.query(where)
             if verbose:
-                print(f"   • Filtered to {len(gdf):,} features (WHERE: {where})")
+                print(f"    Filtered to {len(gdf):,} features (WHERE: {where})")
         
         # Apply spatial clipping if provided
         if clip_extent:
@@ -933,13 +933,13 @@ def convert_geodata_to_fgb(
             # Ensure CRS is WGS84 for clipping
             if gdf.crs and not gdf.crs.equals(4326):
                 if verbose:
-                    print(f"   • Reprojecting to WGS84 for clipping...")
+                    print(f"    Reprojecting to WGS84 for clipping...")
                 gdf = gdf.to_crs(4326)
             
             # Apply spatial filter
             gdf = gdf.cx[lon_min:lon_max, lat_min:lat_max]
             if verbose:
-                print(f"   • Clipped to extent: {len(gdf):,} features retained")
+                print(f"    Clipped to extent: {len(gdf):,} features retained")
         
         # Check if we have any features left
         if len(gdf) == 0:
@@ -948,7 +948,7 @@ def convert_geodata_to_fgb(
         # Ensure valid geometries
         if not gdf.geometry.is_valid.all():
             if verbose:
-                print(f"   • Fixing invalid geometries...")
+                print(f"    Fixing invalid geometries...")
             gdf.geometry = gdf.geometry.buffer(0)
         
         # Write to FlatGeobuf
@@ -965,7 +965,7 @@ def convert_geodata_to_fgb(
     except Exception as e:
         error_msg = f"Conversion failed: {str(e)}"
         if verbose:
-            print(f"   ✗ {error_msg}")
+            print(f"    {error_msg}")
         return False, error_msg, None
 
 
@@ -1047,7 +1047,7 @@ def batch_convert_geodata(
         if results['errors']:
             print("\nErrors:")
             for error in results['errors']:
-                print(f"  ✗ {error}")
+                print(f"   {error}")
         
         if results['converted'] > 0:
             print(f"\n✓ {results['converted']} FlatGeobuf files ready")

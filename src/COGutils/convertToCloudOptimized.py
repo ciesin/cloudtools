@@ -76,7 +76,26 @@ def _check_gdal_tools() -> Tuple[bool, str]:
     return True, "OK"
 
 
-def _run_command(cmd: List[str], verbose: bool) -> Tuple[bool, str]:
+def _check_parquet_driver() -> Tuple[bool, str]:
+    """Verify the OGR Parquet driver is compiled into the installed GDAL."""
+    try:
+        result = subprocess.run(
+            ["ogr2ogr", "--formats"],
+            capture_output=True, text=True, check=False
+        )
+        combined = result.stdout + result.stderr
+        if "Parquet" in combined or "parquet" in combined:
+            return True, "OK"
+        return False, (
+            "OGR Parquet driver not available in this GDAL build. "
+            "Install a GDAL package with Arrow/Parquet support "
+            "(e.g. libgdal-arrow-parquet on Ubuntu, or conda-forge gdal)."
+        )
+    except FileNotFoundError:
+        return False, "ogr2ogr not found on PATH"
+
+
+def _run_command(cmd: List[str]) -> Tuple[bool, str]:
     """Run a subprocess command, return (success, stderr_or_error)."""
     try:
         result = subprocess.run(
@@ -98,17 +117,20 @@ def _cleanup_sidecars(tif_path: Path, verbose: bool) -> int:
     stem = tif_path.stem
     parent = tif_path.parent
 
+    seen: set = set()
     candidates = []
     for ext in TIF_SIDECAR_EXTENSIONS:
-        candidates.append(parent / f"{tif_path.name}{ext}")
-        candidates.append(parent / f"{stem}{ext}")
+        for candidate in (parent / f"{tif_path.name}{ext}", parent / f"{stem}{ext}"):
+            if candidate not in seen:
+                seen.add(candidate)
+                candidates.append(candidate)
 
     for candidate in candidates:
         if candidate.exists() and candidate != tif_path:
             candidate.unlink()
             removed += 1
             if verbose:
-                print(f"     🗑️  Removed sidecar: {candidate.name}")
+                print(f"       Removed sidecar: {candidate.name}")
     return removed
 
 
@@ -141,7 +163,7 @@ def convert_tif_to_cog(
     if output_path.exists() and not overwrite:
         if verbose:
             size_mb = output_path.stat().st_size / 1024 / 1024
-            print(f"⊘ Skip {input_path.name} → {output_path.name} ({size_mb:.1f} MB, exists)")
+            print(f" Skip {input_path.name} -> {output_path.name} ({size_mb:.1f} MB, exists)")
         return True, "Already exists", output_path
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -152,7 +174,7 @@ def convert_tif_to_cog(
         if verbose:
             size_mb = input_path.stat().st_size / 1024 / 1024
             print(f"\n{'='*70}")
-            print(f"🗺️  COG: {input_path.name}  ({size_mb:.1f} MB)")
+            print(f"COG: {input_path.name}  ({size_mb:.1f} MB)")
             print(f"{'='*70}")
 
         cmd = ["gdal_translate", "-of", "COG"]
@@ -161,9 +183,9 @@ def convert_tif_to_cog(
         cmd += [str(input_path), str(output_path)]
 
         if verbose:
-            print(f"  ⚡ Running gdal_translate...", end="", flush=True)
+            print(f"  Running gdal_translate...", end="", flush=True)
 
-        ok, stderr = _run_command(cmd, verbose)
+        ok, stderr = _run_command(cmd)
 
         if not ok:
             if output_path.exists():
@@ -179,13 +201,13 @@ def convert_tif_to_cog(
 
         if verbose:
             print(f"\r   Complete in {elapsed:.1f}s")
-            print(f"     Input:  {in_mb:.1f} MB  →  Output: {out_mb:.1f} MB  ({ratio:+.1f}%)")
+            print(f"     Input:  {in_mb:.1f} MB  ->  Output: {out_mb:.1f} MB  ({ratio:+.1f}%)")
 
         if cleanup_source:
             sidecars = _cleanup_sidecars(input_path, verbose)
             input_path.unlink()
             if verbose:
-                print(f"     🗑️  Removed source ({in_mb:.1f} MB) + {sidecars} sidecar(s)")
+                print(f"       Removed source ({in_mb:.1f} MB) + {sidecars} sidecar(s)")
 
         if verbose:
             print(f"{'='*70}\n")
@@ -232,7 +254,7 @@ def convert_gpkg_to_parquet(
     if output_path.exists() and not overwrite:
         if verbose:
             size_mb = output_path.stat().st_size / 1024 / 1024
-            print(f"⊘ Skip {input_path.name} → {output_path.name} ({size_mb:.1f} MB, exists)")
+            print(f" Skip {input_path.name} -> {output_path.name} ({size_mb:.1f} MB, exists)")
         return True, "Already exists", output_path
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -243,7 +265,7 @@ def convert_gpkg_to_parquet(
         if verbose:
             size_mb = input_path.stat().st_size / 1024 / 1024
             print(f"\n{'='*70}")
-            print(f"📦 GeoParquet: {input_path.name}  ({size_mb:.1f} MB)")
+            print(f"GeoParquet: {input_path.name}  ({size_mb:.1f} MB)")
             if layer:
                 print(f"   Layer: {layer}")
             print(f"{'='*70}")
@@ -257,13 +279,11 @@ def convert_gpkg_to_parquet(
         # Reproject to WGS84 if needed (GeoParquet convention)
         cmd += ["-t_srs", "EPSG:4326"]
         cmd += [str(output_path), str(input_path)]
-        if layer and "-sql" not in cmd:
-            cmd.append(layer)
 
         if verbose:
-            print(f"  ⚡ Running ogr2ogr...", end="", flush=True)
+            print(f"  Running ogr2ogr...", end="", flush=True)
 
-        ok, stderr = _run_command(cmd, verbose)
+        ok, stderr = _run_command(cmd)
 
         if not ok:
             if output_path.exists():
@@ -279,12 +299,12 @@ def convert_gpkg_to_parquet(
 
         if verbose:
             print(f"\r   Complete in {elapsed:.1f}s")
-            print(f"     Input:  {in_mb:.1f} MB  →  Output: {out_mb:.1f} MB  ({ratio:+.1f}%)")
+            print(f"     Input:  {in_mb:.1f} MB  ->  Output: {out_mb:.1f} MB  ({ratio:+.1f}%)")
 
         if cleanup_source:
             input_path.unlink()
             if verbose:
-                print(f"     🗑️  Removed source ({in_mb:.1f} MB)")
+                print(f"       Removed source ({in_mb:.1f} MB)")
 
         if verbose:
             print(f"{'='*70}\n")
@@ -346,6 +366,15 @@ def batch_convert_directory(
         print(f" {msg}")
         return {"success": False, "message": msg}
 
+    if fmt in (None, "parquet"):
+        ok, msg = _check_parquet_driver()
+        if not ok:
+            print(f" {msg}")
+            if fmt == "parquet":
+                return {"success": False, "message": msg}
+            print("  Skipping GeoParquet conversions; continuing with COG only.")
+            fmt = "cog"
+
     # Build list of (input_folder, output_folder) pairs
     if recursive:
         subdirs = sorted([d for d in input_dir.iterdir() if d.is_dir()])
@@ -391,7 +420,7 @@ def batch_convert_directory(
 
         if verbose:
             print(f"\n{'='*70}")
-            print(f"📁 Folder: {folder.name}")
+            print(f"Folder: {folder.name}")
             print(f"   TIFs:  {len(tif_files)}   GPKGs: {len(gpkg_files)}")
             print(f"{'='*70}")
 
@@ -455,7 +484,7 @@ def _print_summary(results: dict):
     print(f"{'='*70}")
     print(f"   Total:     {results['total_files']}")
     print(f"    Done:   {results['converted']}")
-    print(f"   ⊘  Skip:   {results['skipped']}")
+    print(f"     Skip:   {results['skipped']}")
     print(f"   Errors: {len(results['errors'])}")
     if results["output_files"]:
         total_mb = sum(f.stat().st_size for f in results["output_files"] if f.exists()) / 1024 / 1024
@@ -463,7 +492,7 @@ def _print_summary(results: dict):
     if results["errors"]:
         print(f"\n ERRORS:")
         for e in results["errors"]:
-            print(f"   • {e['file']}: {e['error']}")
+            print(f"   - {e['file']}: {e['error']}")
     print(f"{'='*70}\n")
 
 
@@ -471,7 +500,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Convert TIFFs → COG GeoTIFF and GeoPackages → GeoParquet"
+        description="Convert TIFFs -> COG GeoTIFF and GeoPackages -> GeoParquet"
     )
     parser.add_argument("--input-dir", required=True,
                         help="Input directory (or root directory with --recursive)")
