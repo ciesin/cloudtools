@@ -1,3 +1,40 @@
+# Multi-GB: few parallel streams, large chunks
+LARGE_FILE_FLAGS = {
+    "--s3-chunk-size":        "256M",
+    "--s3-upload-concurrency": "8",
+    "--multi-thread-streams": "8",
+    "--multi-thread-cutoff":  "64M",
+    "--buffer-size":          "64M",
+    "--transfers":            "4",
+    "--checkers":             "8",
+    "--fast-list":            None,
+    "--retries":              "3",
+    "--progress":             None,
+    "--stats":                "30s",
+    "--s3-no-check-bucket":   None,
+}
+
+# Many small files: STAC JSON, metadata, map images
+SMALL_FILES_FLAGS = {
+    "--transfers":          "32",
+    "--checkers":           "32",
+    "--fast-list":          None,
+    "--size-only":          None,
+    # "--stats":              "30s",
+    "--s3-no-check-bucket": None,
+}
+
+# R2->R2 bucket sync: server-side copy, skip checksum (avoid R2 hash charges)
+R2_SYNC_FLAGS = {
+    "--s3-chunk-size":        "256M",
+    "--s3-upload-concurrency": "8",
+    "--fast-list":            None,
+    "--size-only":            None,
+    "--transfers":            "4",
+    "--checkers":             "8",
+    "--stats":                "30s",
+    "--s3-no-check-bucket":   None,
+}
 
 rclone moveto ciesin-r2:ciesin-dev/tiles/terrain.pmtiles ciesin-r2:ciesin-dev/alpha/terrain.pmtiles --progress --s3-no-check-bucket --s3-chunk-size=256M --header-upload "Content-Type: application/vnd.pmtiles"
 
@@ -12,6 +49,11 @@ rclone copy ciesin-r2:ciesin-dev/tiles/ ciesin-r2:ciesin-prod/tiles \
   --header-upload "Content-Type: application/vnd.pmtiles" \
   --dry-run
 
+
+rclone copyto buildings_overview.pmtiles \
+  ciesin-r2:ciesin-prod/tiles/overture/buildings_overview.pmtiles \
+  --s3-chunk-size=256M --s3-upload-concurrency=8 --multi-thread-streams=8 --multi-thread-cutoff=64M --buffer-size=64M --transfers=4 --checkers=8 --fast-list --retries=3 --progress --stats=30s --s3-no-check-bucket \
+  --header-upload "Content-Type: application/vnd.pmtiles"
 
 rclone copyto GRID3_AFRICA_settlement_extents_v3_0.pmtiles \
   ciesin-r2:ciesin-dev/tiles/grid3/africa/GRID3_AFRICA_settlement_extents_v3_0.pmtiles \
